@@ -37,10 +37,6 @@ SOFT_DISABLE_TIME = 3  # seconds
 LDW_MIN_SPEED = 31 * CV.MPH_TO_MS
 LANE_DEPARTURE_THRESHOLD = 0.1
 
-MIN_CURVE_SPEED = 19. * CV.MPH_TO_MS	
-MAX_HIGHWAY_SPEED = 65 * CV.MPH_TO_MS	
-MAX_CITY_SPEED = 45 * CV.MPH_TO_MS
-
 REPLAY = "REPLAY" in os.environ
 SIMULATION = "SIMULATION" in os.environ
 NOSENSOR = "NOSENSOR" in os.environ
@@ -295,7 +291,8 @@ class Controls:
     if EON and (self.sm['peripheralState'].pandaType != PandaType.uno) and \
        self.sm['deviceState'].batteryPercent < 1 and self.sm['deviceState'].chargingError:
       # at zero percent battery, while discharging, OP should not allowed
-      self.events.add(EventName.lowBattery)
+    # self.events.add(EventName.lowBattery)
+      pass
     if self.sm['deviceState'].thermalStatus >= ThermalStatus.red:
       self.events.add(EventName.overheat)
     if self.sm['deviceState'].freeSpacePercent < 7 and not SIMULATION:
@@ -515,7 +512,7 @@ class Controls:
   def state_transition(self, CS):
     """Compute conditional state transitions and execute actions on state transitions"""
 
-    #self.v_cruise_kph_last = self.v_cruise_kph
+    self.v_cruise_kph_last = self.v_cruise_kph
 
     self.CP.pcmCruise = self.CI.CP.pcmCruise
 
@@ -527,31 +524,17 @@ class Controls:
     #    self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
     #  else:
     #    self.v_cruise_kph = 0
-  
-    ################################################################################################  
-    vtcState = self.sm['longitudinalPlan'].visionTurnControllerState	
-    vtc_speed = self.sm['longitudinalPlan'].visionTurnSpeed 	
-    max_speed_limit = MAX_HIGHWAY_SPEED	
+
+    SccSmoother.update_cruise_buttons(self, CS, self.CP.openpilotLongitudinalControl)
 
     #visionTurnControl	
+    vtcState = self.sm['longitudinalPlan'].visionTurnControllerState
     if vtcState == 1:	
       self.events.add(EventName.visionEntering)	
     elif vtcState == 2:	
       self.events.add(EventName.visionTurning)	
     elif vtcState == 3:	
       self.events.add(EventName.visionleaving)	
-
-    if vtcState > 0 and vtcState < 4 and int(vtc_speed) >= int(MIN_CURVE_SPEED)  and int(vtc_speed) <= int(max_speed_limit): #MIN_CURVE_SPEED = 19mph, MAX_HIGHWAY_SPEED = 65mph	
-      if vtc_speed < CS.vEgo:	
-        vtc_speed = float(max(vtc_speed, MIN_CURVE_SPEED))	
-        vtc_speed = float(min(vtc_speed, max_speed_limit))	
-        self.v_cruise_kph = vtc_speed * CV.MS_TO_KPH	
-        self.events.add(EventName.curvespeedValueChange)	
-
-    self.v_cruise_kph_last = self.v_cruise_kph
-    ################################################################################################ 
-
-    SccSmoother.update_cruise_buttons(self, CS, self.CP.openpilotLongitudinalControl)
     
     # decrement the soft disable timer at every step, as it's reset on
     # entrance in SOFT_DISABLING state
