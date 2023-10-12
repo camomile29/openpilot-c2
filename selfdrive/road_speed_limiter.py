@@ -16,7 +16,7 @@ from common.conversions import Conversions as CV
 from selfdrive.hardware import TICI
 from common.params import Params
 
-CAMERA_SPEED_FACTOR = 1.05
+CAMERA_SPEED_FACTOR = 1.1
 
 
 class Port:
